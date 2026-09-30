@@ -19,7 +19,8 @@ class Settings:
 
     NEO4J_PASSWORD = os.getenv(
         "NEO4J_PASSWORD",
-        "password"
+        "12345678"
+        
     )
 
 
