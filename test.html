@@ -347,8 +347,9 @@ button:hover { background-color: var(--surface-container-high); }
       display: flex;
       flex-direction: column;
     }
-    .metric-title { font-size: 12px; color: var(--on-surface-variant); font-weight: 500; }
-    .metric-value { font-size: 15px; font-weight: 600; font-family: var(--ff-mono, monospace); color: var(--on-surface); margin-top: 2px; }
+    /* ĐÃ TĂNG CỠ CHỮ CÔNG THỨC LÊN 13px */
+    .metric-title { font-size: 13px; color: var(--on-surface-variant); font-weight: 600; }
+    .metric-value { font-size: 16px; font-weight: 600; font-family: var(--ff-mono, monospace); color: var(--on-surface); margin-top: 2px; }
     
     .properties-list {
       background: var(--surface-bright);
@@ -500,10 +501,22 @@ button:hover { background-color: var(--surface-container-high); }
           <!-- Tab 1: Metrics & Properties -->
           <div id="tabMetrics" class="tab-pane is-active">
             <div class="metrics-grid">
-              <div class="metric-card"><span class="metric-title">Chu vi (P)</span><span id="valPerimeter" class="metric-value">0.00</span></div>
-              <div class="metric-card"><span class="metric-title">Diện tích (S)</span><span id="valArea" class="metric-value">0.00</span></div>
-              <div class="metric-card"><span class="metric-title">Đường chéo AC</span><span id="valAC" class="metric-value">0.00</span></div>
-              <div class="metric-card"><span class="metric-title">Đường chéo BD</span><span id="valBD" class="metric-value">0.00</span></div>
+              <div class="metric-card">
+                <span class="metric-title">Chu vi (P) = AB + BC + CD + DA</span>
+                <span id="valPerimeter" class="metric-value">0.00</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">Diện tích (S) = ½ |Σ(x<sub>i</sub>y<sub>i+1</sub> - x<sub>i+1</sub>y<sub>i</sub>)|</span>
+                <span id="valArea" class="metric-value">0.00</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">Đường chéo AC = √(x<sub>C</sub>-x<sub>A</sub>)² + (y<sub>C</sub>-y<sub>A</sub>)²</span>
+                <span id="valAC" class="metric-value">0.00</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">Đường chéo BD = √(x<sub>D</sub>-x<sub>B</sub>)² + (y<sub>D</sub>-y<sub>B</sub>)²</span>
+                <span id="valBD" class="metric-value">0.00</span>
+              </div>
             </div>
 
             <div class="properties-list">
@@ -605,7 +618,7 @@ button:hover { background-color: var(--surface-container-high); }
                 </g>
               </svg>
             </div>
-            <span style="font-size: 11px; color: var(--on-surface-variant); text-align: center; font-style: italic;">* Đã tách biệt chuẩn xác tọa độ giữa "Không cạnh //" và "Tứ Giác Lồi"</span>
+            <span style="font-size: 11px; color: var(--on-surface-variant); text-align: center; font-style: italic;">* Đã tăng kích thước hiển thị công thức rõ ràng</span>
           </div>
 
         </div>
@@ -634,15 +647,14 @@ button:hover { background-color: var(--surface-container-high); }
       showGrid: true
     };
 
-    // ĐÃ TÁCH BIỆT RÕ RÀNG TỌA ĐỘ CHO TỪNG PRESET ĐỂ KHÔNG BỊ NHẦM LẪN NHÁNH
     const PRESETS = {
       square: { A: {x: -3, y: 3}, B: {x: 3, y: 3}, C: {x: 3, y: -3}, D: {x: -3, y: -3} },
       rectangle: { A: {x: -4, y: 2.5}, B: {x: 4, y: 2.5}, C: {x: 4, y: -2.5}, D: {x: -4, y: -2.5} },
       rhombus: { A: {x: 0, y: 4}, B: {x: 3, y: 0}, C: {x: 0, y: -4}, D: {x: -3, y: 0} },
       parallelogram: { A: {x: -2, y: 3}, B: {x: 4, y: 3}, C: {x: 2, y: -3}, D: {x: -4, y: -3} },
       trapezoid: { A: {x: -2, y: 3}, B: {x: 2, y: 3}, C: {x: 4, y: -3}, D: {x: -4, y: -3} },
-      no_parallel: { A: {x: -3, y: 4}, B: {x: 3, y: 2.5}, C: {x: 2, y: -3}, D: {x: -3.5, y: -3} }, // Phân nhánh "Không cạnh //"
-      convex: { A: {x: -2.5, y: 3.5}, B: {x: 3.5, y: 3}, C: {x: 2.5, y: -2.5}, D: {x: -3, y: -2} }, // Phân nhánh "Tứ Giác Lồi" chuẩn xác
+      no_parallel: { A: {x: -3, y: 4}, B: {x: 3, y: 2.5}, C: {x: 2, y: -3}, D: {x: -3.5, y: -3} },
+      convex: { A: {x: -2.5, y: 3.5}, B: {x: 3.5, y: 3}, C: {x: 2.5, y: -2.5}, D: {x: -3, y: -2} },
       general: { A: {x: -3, y: 3.5}, B: {x: 3.5, y: 2}, C: {x: 2.5, y: -3.5}, D: {x: -3.5, y: -2} }
     };
 
