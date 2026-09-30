@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<script id="lumi-getcssvar">
+window.getCssVar = window.getCssVar || function(name) {
+  try {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  } catch (e) { return ''; }
+};
+</script>
+
+<script id="lumi-canvas-guard">
+(function() {
+  if (window.__lumiCanvasGuard) return;
+  window.__lumiCanvasGuard = true;
+  var MAX_PX = 4096, MIN_FONT_PX = 12;
+  try {
+    var CP = HTMLCanvasElement.prototype;
+    var BOX = {width: 'clientWidth', height: 'clientHeight'}, D = {};
+    Object.keys(BOX).forEach(function(p) {
+      D[p] = Object.getOwnPropertyDescriptor(CP, p);
+    });
+    var tracking = function(el, p) {
+      var box = el[BOX[p]];
+      return !el.style[p] && box > 0 && box === D[p].get.call(el) &&
+          box === el['__lumiLast' + p];
+    };
+    var MAX = {width: 'maxWidth', height: 'maxHeight'};
+    var PAD = {width: ['paddingLeft', 'paddingRight'],
+               height: ['paddingTop', 'paddingBottom']};
+    var avail = function(el, p) {
+      var pe = el.parentElement;
+      if (!pe) return 0;
+      var cs = getComputedStyle(pe);
+      return pe[BOX[p]] - parseFloat(cs[PAD[p][0]]) -
+          parseFloat(cs[PAD[p][1]]);
+    };
+    Object.keys(BOX).forEach(function(p) {
+      var d = D[p];
+      if (!d || !d.set || !d.get) return;
+      Object.defineProperty(CP, p, {
+        configurable: true, enumerable: d.enumerable, get: d.get,
+        set: function(v) {
+          var n = +v, box = this[BOX[p]];
+          if (n > MAX_PX) n = MAX_PX;
+          if (n > box && tracking(this, p)) {
+            var el = this, pins = {};
+            Object.keys(BOX).forEach(function(q) {
+              if (tracking(el, q)) pins[q] = avail(el, q) ||
+                  el['__lumiBox' + q];
+            });
+            Object.keys(pins).forEach(function(q) {
+              el.style[q] = '100%';
+              el.style[MAX[q]] = pins[q] + 'px';
+            });
+            n = box;
+          }
+          this['__lumiBox' + p] = box;
+          this['__lumiLast' + p] = n;
+          d.set.call(this, isNaN(n) ? v : n);
+        }
+      });
+    });
+  } catch (e) {}
+  try {
+    var XP = CanvasRenderingContext2D.prototype;
+    var px = /(\d*\.?\d+)px/;
+    var floorFont = function(ctx) {
+      var f = ctx.font, m = px.exec(f);
+      if (m && +m[1] >= 4 && +m[1] < MIN_FONT_PX) ctx.font = f.replace(px, MIN_FONT_PX + 'px');
+    };
+    ['fillText', 'strokeText', 'measureText'].forEach(function(k) {
+      var o = XP[k];
+      if (typeof o !== 'function') return;
+      XP[k] = function() { floorFont(this); return o.apply(this, arguments); };
+    });
+  } catch (e) {}
+})();
+</script>
+
+<style id="lumi-runtime">
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:ital,wght@0,300..700;1,300..700&family=Google+Sans+Code:ital,wght,MONO@0,300..700,0..1;1,300..700,0..1&display=swap');
+
+:root {
+  --body-bg: transparent;
+  --ff-sans: 'Google Sans Flex', 'Google Sans Text', 'Google Sans', sans-serif;
+  --ff-mono: 'Google Sans Code', 'Google Sans Mono', monospace;
+  --lumi-sys-spacing--xs: 4px;
+  --lumi-sys-spacing--s: 8px;
+  --lumi-sys-spacing--m: 12px;
+  --lumi-sys-spacing--l: 16px;
+  --lumi-sys-shape--small: 8px;
+  --lumi-sys-shape--medium: 12px;
+  --lumi-sys-shape--large: 16px;
+  --lumi-sys-shape--full: 999px;
+  --lumi-sys-color--surface: #fdfcfc;
+  --lumi-sys-color--surface-dim: #f2f0f0;
+  --lumi-sys-color--surface-bright: #ffffff;
+  --lumi-sys-color--on-surface: #000000;
+  --lumi-sys-color--on-surface-variant: rgba(0, 0, 0, 0.55);
+  --lumi-sys-color--on-surface-low: rgba(0, 0, 0, 0.08);
+  --lumi-sys-color--primary: #3186ff;
+  --lumi-sys-color--accent: #9dd2ff;
+  --lumi-sys-color--accent-container: #dcf1ff;
+  --lumi-sys-color--accent-fixed: #3186ff;
+  --lumi-sys-color--outline: #727676;
+  --lumi-sys-color--stroke-default: #e3e3e3;
+  --surface: #fdfcfc;
+  --surface-dim: #f2f0f0;
+  --surface-bright: #ffffff;
+  --surface-container: #f2f0f0;
+  --surface-container-high: #e6e6e6;
+  --on-surface: #000000;
+  --on-surface-variant: rgba(0, 0, 0, 0.55);
+  --primary: #3186ff;
+  --primary-container: #dcf1ff;
+  --accent-fixed: #3186ff;
+  --accent-container: #dcf1ff;
+  --stroke-default: #e3e3e3;
+  --outline: #727676;
+}
+
+:root[data-theme="dark"], body.dark-mode {
+  --body-bg: #0f0f0f;
+  --lumi-sys-color--surface: #0f0f0f;
+  --lumi-sys-color--surface-dim: #141414;
+  --lumi-sys-color--surface-bright: #1c1c1c;
+  --lumi-sys-color--on-surface: #e0e0e0;
+  --lumi-sys-color--on-surface-variant: rgba(255, 255, 255, 0.55);
+  --lumi-sys-color--primary: #9dd2ff;
+  --lumi-sys-color--accent: #1f3b9b;
+  --lumi-sys-color--accent-container: #192967;
+  --lumi-sys-color--accent-fixed: #3186ff;
+  --lumi-sys-color--stroke-default: #2d2f38;
+  --surface: #0f0f0f;
+  --surface-dim: #141414;
+  --surface-bright: #1c1c1c;
+  --surface-container: #141414;
+  --surface-container-high: #1c1c1c;
+  --on-surface: #e0e0e0;
+  --on-surface-variant: rgba(255, 255, 255, 0.55);
+  --primary: #9dd2ff;
+  --primary-container: #192967;
+  --stroke-default: #2d2f38;
+  --outline: #9a9b9c;
+}
+
+html, body {
+  background: var(--body-bg, transparent) !important;
+  color: var(--on-surface) !important;
+  overflow-y: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.widget-container {
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 16px;
+  font-family: var(--ff-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--on-surface);
+  background-color: var(--surface-bright);
+  border: 1px solid var(--stroke-default);
+  border-radius: var(--lumi-sys-shape--full, 999px);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+button:hover { background-color: var(--surface-container-high); }
+</style>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phòng Thí Nghiệm Hình Học 2D - Neo4j Graph Logic</title>
+  <style>
+    .sandbox-card {
+      background: var(--surface-dim);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .sandbox-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .classification-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: var(--accent-container);
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 13px;
+      border: 1px solid var(--primary);
+    }
+    .control-toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface-bright);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke-default);
+    }
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .toolbar-label {
+      font-size: 13px;
+      color: var(--on-surface-variant);
+      font-weight: 500;
+      min-width: 70px;
+    }
+    .preset-chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .preset-chip {
+      background: var(--surface-dim);
+      color: var(--on-surface);
+      border: 1px solid var(--stroke-default);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .preset-chip:hover { background: var(--surface-container-high); }
+    .preset-chip.is-active {
+      background: var(--primary-container);
+      color: var(--accent-fixed);
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    .toggle-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .main-grid-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 620px) {
+      .main-grid-layout { grid-template-columns: 1.1fr 0.9fr; }
+    }
+    .canvas-wrapper-box {
+      position: relative;
+      width: 100%;
+      height: 350px;
+      background: var(--surface-bright);
+      border-radius: 12px;
+      border: 1px solid var(--stroke-default);
+      overflow: hidden;
+      touch-action: none;
+    }
+    .geo-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+    .canvas-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      font-size: 12px;
+      font-family: var(--ff-mono, monospace);
+      font-style: italic;
+      color: var(--on-surface-variant);
+      pointer-events: none;
+      background: rgba(255,255,255,0.8);
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+    .panel-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .panel-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--stroke-default);
+      padding-bottom: 4px;
+    }
+    .panel-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--on-surface-variant);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .panel-tab-btn.is-active {
+      background: var(--surface-bright);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tab-pane.is-active { display: flex; }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .metric-card {
+      background: var(--surface-bright);
+      border: 1px solid var(--stroke-default);
+      border-radius: 12px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    /* ĐÃ TĂNG CỠ CHỮ CÔNG THỨC LÊN 13px */
+    .metric-title { font-size: 13px; color: var(--on-surface-variant); font-weight: 600; }
+    .metric-value { font-size: 16px; font-weight: 600; font-family: var(--ff-mono, monospace); color: var(--on-surface); margin-top: 2px; }
+    
+    .properties-list {
+      background: var(--surface-bright);
+      border: 1px solid var(--stroke-default);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .prop-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+    .prop-key { color: var(--on-surface-variant); }
+    .prop-val { font-weight: 600; font-family: var(--ff-mono, monospace); }
+
+    .edge-input-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .edge-input-box {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .edge-input-box label {
+      font-size: 11px;
+      color: var(--on-surface-variant);
+      font-weight: 500;
+      text-align: center;
+    }
+    .edge-input-box input {
+      width: 100%;
+      padding: 4px;
+      text-align: center;
+      font-family: var(--ff-mono, monospace);
+      font-size: 13px;
+      border: 1px solid var(--stroke-default);
+      border-radius: 6px;
+      background: var(--surface-bright);
+      color: var(--on-surface);
+      box-sizing: border-box;
+      outline: none;
+    }
+    .edge-input-box input:focus { border-color: var(--primary); }
+
+    .graph-preview-box {
+      width: 100%;
+      height: 290px;
+      background: var(--surface-bright);
+      border: 1px solid var(--stroke-default);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .graph-svg { width: 100%; height: 100%; display: block; }
+    
+    .g-node-group {
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .g-node-group:hover { transform: scale(1.03); }
+    .g-node-rect {
+      fill: var(--surface-dim);
+      stroke: var(--outline);
+      stroke-width: 1.5px;
+      transition: fill 0.2s ease, stroke 0.2s ease;
+    }
+    .g-node-rect.is-active {
+      fill: var(--accent-container);
+      stroke: var(--primary);
+      stroke-width: 2px;
+    }
+    .g-node-text {
+      font-family: var(--ff-sans, sans-serif);
+      font-size: 11px;
+      fill: var(--on-surface);
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .g-node-text.is-active { font-weight: 600; }
+    .g-edge-line {
+      stroke: var(--stroke-default);
+      stroke-width: 1.2px;
+      stroke-dasharray: 3 3;
+      fill: none;
+      transition: stroke 0.2s ease, stroke-width 0.2s ease;
+    }
+    .g-edge-line.is-active {
+      stroke: var(--primary);
+      stroke-width: 2px;
+      stroke-dasharray: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <div class="sandbox-card">
+      
+      <!-- Header -->
+      <div class="sandbox-header">
+        <div class="sandbox-title-group">
+          <h2 style="margin:0; font-size: 18px;">Phòng Thí Nghiệm Hình Học 2D</h2>
+          <span style="font-size: 12px; color: var(--on-surface-variant);">Bấm trực tiếp vào mọi node Neo4j để vẽ hình tương ứng</span>
+        </div>
+        <div id="shapeBadge" class="classification-badge">Hình Vuông</div>
+      </div>
+
+      <!-- Control Toolbar -->
+      <div class="control-toolbar">
+        <div class="toolbar-row">
+          <span class="toolbar-label">Mẫu hình:</span>
+          <div class="preset-chip-group">
+            <button class="preset-chip is-active" data-preset="square">Hình Vuông</button>
+            <button class="preset-chip" data-preset="rectangle">Hình Chữ Nhật</button>
+            <button class="preset-chip" data-preset="rhombus">Hình Thoi</button>
+            <button class="preset-chip" data-preset="parallelogram">Hình Bình Hành</button>
+            <button class="preset-chip" data-preset="trapezoid">Hình Thang</button>
+            <button class="preset-chip" data-preset="general">Tứ Giác Thường</button>
+          </div>
+        </div>
+        <div class="toolbar-row">
+          <span class="toolbar-label">Hiển thị:</span>
+          <div class="toggle-group">
+            <label class="toggle-item"><input type="checkbox" id="chkDiagonals" checked><span>Đường chéo</span></label>
+            <label class="toggle-item"><input type="checkbox" id="chkAngles" checked><span>Góc vuông</span></label>
+            <label class="toggle-item"><input type="checkbox" id="chkGrid" checked><span>Lưới tọa độ</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Layout Grid -->
+      <div class="main-grid-layout">
+        
+        <!-- Left: Interactive Canvas -->
+        <div class="canvas-wrapper-box">
+          <canvas id="geoCanvas" class="geo-canvas"></canvas>
+          <div class="canvas-hint">Kéo đỉnh hoặc bấm node Neo4j để chuyển đổi hình</div>
+        </div>
+
+        <!-- Right: Inspector Panels -->
+        <div class="panel-container">
+          <div class="panel-tabs">
+            <button class="panel-tab-btn is-active" data-tab="tabMetrics">Thông Số &amp; Tính Chất</button>
+            <button class="panel-tab-btn" data-tab="tabGraph">Neo4j Graph Logic</button>
+          </div>
+
+          <!-- Tab 1: Metrics & Properties -->
+          <div id="tabMetrics" class="tab-pane is-active">
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <span class="metric-title">Chu vi (P) = AB + BC + CD + DA</span>
+                <span id="valPerimeter" class="metric-value">0.00</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">Diện tích (S) = ½ |Σ(x<sub>i</sub>y<sub>i+1</sub> - x<sub>i+1</sub>y<sub>i</sub>)|</span>
+                <span id="valArea" class="metric-value">0.00</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">Đường chéo AC = √(x<sub>C</sub>-x<sub>A</sub>)² + (y<sub>C</sub>-y<sub>A</sub>)²</span>
+                <span id="valAC" class="metric-value">0.00</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-title">Đường chéo BD = √(x<sub>D</sub>-x<sub>B</sub>)² + (y<sub>D</sub>-y<sub>B</sub>)²</span>
+                <span id="valBD" class="metric-value">0.00</span>
+              </div>
+            </div>
+
+            <div class="properties-list">
+              <div class="prop-item" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                <span class="prop-key">Nhập độ dài các cạnh (AB, BC, CD, DA):</span>
+                <div class="edge-input-grid">
+                  <div class="edge-input-box">
+                    <label>AB</label>
+                    <input type="number" id="inputAB" step="0.5" min="1" max="15" value="6">
+                  </div>
+                  <div class="edge-input-box">
+                    <label>BC</label>
+                    <input type="number" id="inputBC" step="0.5" min="1" max="15" value="6">
+                  </div>
+                  <div class="edge-input-box">
+                    <label>CD</label>
+                    <input type="number" id="inputCD" step="0.5" min="1" max="15" value="6">
+                  </div>
+                  <div class="edge-input-box">
+                    <label>DA</label>
+                    <input type="number" id="inputDA" step="0.5" min="1" max="15" value="6">
+                  </div>
+                </div>
+              </div>
+              <div class="prop-item"><span class="prop-key">Cặp cạnh song song:</span><span id="valParallel" class="prop-val">2 cặp</span></div>
+              <div class="prop-item"><span class="prop-key">Số góc vuông:</span><span id="valRightAngles" class="prop-val">4</span></div>
+              <div class="prop-item"><span class="prop-key">Trạng thái:</span><span id="valConvexity" class="prop-val">Hình Vuông</span></div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Neo4j Graph logic preview -->
+          <div id="tabGraph" class="tab-pane">
+            <div class="graph-preview-box">
+              <svg id="graphSvg" class="graph-svg" viewBox="0 0 320 285">
+                <!-- Connecting Edges -->
+                <line id="edge-par2" class="g-edge-line" x1="160" y1="32" x2="65" y2="75" />
+                <line id="edge-par1" class="g-edge-line" x1="160" y1="32" x2="160" y2="75" />
+                <line id="edge-par0" class="g-edge-line" x1="160" y1="32" x2="255" y2="75" />
+
+                <line id="edge-parallelogram" class="g-edge-line" x1="65" y1="101" x2="65" y2="135" />
+
+                <line id="edge-rect" class="g-edge-line" x1="65" y1="161" x2="47" y2="195" />
+                <line id="edge-rhombus" class="g-edge-line" x1="65" y1="161" x2="130" y2="195" />
+
+                <line id="edge-square-from-rect" class="g-edge-line" x1="47" y1="221" x2="90" y2="250" />
+                <line id="edge-square-from-rhombus" class="g-edge-line" x1="130" y1="221" x2="90" y2="250" />
+
+                <line id="edge-trap" class="g-edge-line" x1="160" y1="101" x2="210" y2="195" />
+                <line id="edge-general" class="g-edge-line" x1="255" y1="101" x2="282" y2="195" />
+
+                <!-- Root Node -->
+                <g id="node-root" class="g-node-group" data-action="general">
+                  <rect class="g-node-rect is-active" x="100" y="8" width="120" height="24" rx="12" />
+                  <text class="g-node-text is-active" x="160" y="20">:TứGiác (ABCD)</text>
+                </g>
+
+                <!-- Tier 1: Properties -->
+                <g id="node-prop-par2" class="g-node-group" data-action="parallelogram">
+                  <rect class="g-node-rect" x="15" y="75" width="100" height="26" rx="13" />
+                  <text class="g-node-text" x="65" y="88">2 cặp cạnh //</text>
+                </g>
+                <g id="node-prop-par1" class="g-node-group" data-action="trapezoid">
+                  <rect class="g-node-rect" x="120" y="75" width="80" height="26" rx="13" />
+                  <text class="g-node-text" x="160" y="88">1 cặp cạnh //</text>
+                </g>
+                <g id="node-prop-par0" class="g-node-group" data-action="no_parallel">
+                  <rect class="g-node-rect" x="205" y="75" width="100" height="26" rx="13" />
+                  <text class="g-node-text" x="255" y="88">Không cạnh //</text>
+                </g>
+
+                <!-- Tier 2: Parallelogram -->
+                <g id="node-type-parallelogram" class="g-node-group" data-action="parallelogram">
+                  <rect class="g-node-rect" x="15" y="135" width="100" height="26" rx="13" />
+                  <text class="g-node-text" x="65" y="148">Hình Bình Hành</text>
+                </g>
+
+                <!-- Tier 3 -->
+                <g id="node-type-rect" class="g-node-group" data-action="rectangle">
+                  <rect class="g-node-rect" x="5" y="195" width="85" height="26" rx="13" />
+                  <text class="g-node-text" x="47" y="208">Hình Chữ Nhật</text>
+                </g>
+                <g id="node-type-rhombus" class="g-node-group" data-action="rhombus">
+                  <rect class="g-node-rect" x="95" y="195" width="70" height="26" rx="13" />
+                  <text class="g-node-text" x="130" y="208">Hình Thoi</text>
+                </g>
+                <g id="node-type-trap" class="g-node-group" data-action="trapezoid">
+                  <rect class="g-node-rect" x="175" y="195" width="70" height="26" rx="13" />
+                  <text class="g-node-text" x="210" y="208">Hình Thang</text>
+                </g>
+                <g id="node-type-convex" class="g-node-group" data-action="convex">
+                  <rect class="g-node-rect" x="250" y="195" width="65" height="26" rx="13" />
+                  <text class="g-node-text" x="282" y="208">Tứ Giác Lồi</text>
+                </g>
+
+                <!-- Tier 4: Square -->
+                <g id="node-type-square" class="g-node-group" data-action="square">
+                  <rect class="g-node-rect" x="50" y="250" width="80" height="26" rx="13" />
+                  <text class="g-node-text" x="90" y="263">Hình Vuông</text>
+                </g>
+              </svg>
+            </div>
+            <span style="font-size: 11px; color: var(--on-surface-variant); text-align: center; font-style: italic;">* Đã tăng kích thước hiển thị công thức rõ ràng</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function getCssVar(name) {
+      if (!name) return '';
+      const clean = name.replace(/^var\(/, '').replace(/\)$/, '').trim();
+      return getComputedStyle(document.documentElement).getPropertyValue(clean.startsWith('--') ? clean : '--' + clean).trim();
+    }
+
+    const GRID_SCALE = 30; 
+    let state = {
+      pts: {
+        A: { x: -3, y: 3 },
+        B: { x: 3, y: 3 },
+        C: { x: 3, y: -3 },
+        D: { x: -3, y: -3 }
+      },
+      showDiagonals: true,
+      showAngles: true,
+      showGrid: true
+    };
+
+    const PRESETS = {
+      square: { A: {x: -3, y: 3}, B: {x: 3, y: 3}, C: {x: 3, y: -3}, D: {x: -3, y: -3} },
+      rectangle: { A: {x: -4, y: 2.5}, B: {x: 4, y: 2.5}, C: {x: 4, y: -2.5}, D: {x: -4, y: -2.5} },
+      rhombus: { A: {x: 0, y: 4}, B: {x: 3, y: 0}, C: {x: 0, y: -4}, D: {x: -3, y: 0} },
+      parallelogram: { A: {x: -2, y: 3}, B: {x: 4, y: 3}, C: {x: 2, y: -3}, D: {x: -4, y: -3} },
+      trapezoid: { A: {x: -2, y: 3}, B: {x: 2, y: 3}, C: {x: 4, y: -3}, D: {x: -4, y: -3} },
+      no_parallel: { A: {x: -3, y: 4}, B: {x: 3, y: 2.5}, C: {x: 2, y: -3}, D: {x: -3.5, y: -3} },
+      convex: { A: {x: -2.5, y: 3.5}, B: {x: 3.5, y: 3}, C: {x: 2.5, y: -2.5}, D: {x: -3, y: -2} },
+      general: { A: {x: -3, y: 3.5}, B: {x: 3.5, y: 2}, C: {x: 2.5, y: -3.5}, D: {x: -3.5, y: -2} }
+    };
+
+    const canvas = document.getElementById('geoCanvas');
+    const ctx = canvas.getContext('2d');
+    const shapeBadge = document.getElementById('shapeBadge');
+    
+    const valPerimeter = document.getElementById('valPerimeter');
+    const valArea = document.getElementById('valArea');
+    const valAC = document.getElementById('valAC');
+    const valBD = document.getElementById('valBD');
+    const valParallel = document.getElementById('valParallel');
+    const valRightAngles = document.getElementById('valRightAngles');
+    const valConvexity = document.getElementById('valConvexity');
+
+    const inputAB = document.getElementById('inputAB');
+    const inputBC = document.getElementById('inputBC');
+    const inputCD = document.getElementById('inputCD');
+    const inputDA = document.getElementById('inputDA');
+
+    let draggedPtKey = null;
+
+    function dist(p1, p2) { return Math.hypot(p2.x - p1.x, p2.y - p1.y); }
+    function isParallel(v1, v2, tol = 0.08) {
+      const cross = v1.x * v2.y - v1.y * v2.x;
+      const len1 = Math.hypot(v1.x, v1.y);
+      const len2 = Math.hypot(v2.x, v2.y);
+      if (len1 === 0 || len2 === 0) return false;
+      return Math.abs(cross / (len1 * len2)) < tol;
+    }
+    function dotProduct(v1, v2) { return v1.x * v2.x + v1.y * v2.y; }
+    function isPerpendicular(v1, v2, tol = 0.08) {
+      const dot = dotProduct(v1, v2);
+      const len1 = Math.hypot(v1.x, v1.y);
+      const len2 = Math.hypot(v2.x, v2.y);
+      if (len1 === 0 || len2 === 0) return false;
+      return Math.abs(dot / (len1 * len2)) < tol;
+    }
+    function calcArea(pts) {
+      const {A, B, C, D} = pts;
+      return Math.abs((A.x*B.y - A.y*B.x) + (B.x*C.y - B.y*C.x) + (C.x*D.y - C.y*D.x) + (D.x*A.y - D.y*A.x)) / 2;
+    }
+    function checkConvexity(pts) {
+      const p = [pts.A, pts.B, pts.C, pts.D];
+      let pos = 0, neg = 0;
+      for (let i = 0; i < 4; i++) {
+        const p1 = p[i], p2 = p[(i + 1) % 4], p3 = p[(i + 2) % 4];
+        const cross = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x);
+        if (cross > 0) pos++;
+        if (cross < 0) neg++;
+      }
+      if (pos === 4 || neg === 4) return 'Lồi';
+      return 'Lõm';
+    }
+
+    function classifyQuadrilateral(pts) {
+      const {A, B, C, D} = pts;
+      const ab = { x: B.x - A.x, y: B.y - A.y };
+      const bc = { x: C.x - B.x, y: C.y - B.y };
+      const cd = { x: D.x - C.x, y: D.y - C.y };
+      const da = { x: A.x - D.x, y: A.y - D.y };
+
+      const lenAB = dist(A, B), lenBC = dist(B, C), lenCD = dist(C, D), lenDA = dist(D, A);
+      const lenAC = dist(A, C), lenBD = dist(B, D);
+
+      const par1 = isParallel(ab, cd);
+      const par2 = isParallel(bc, da);
+      let parCount = (par1 ? 1 : 0) + (par2 ? 1 : 0);
+
+      const rightCount = [isPerpendicular(da, ab), isPerpendicular(ab, bc), isPerpendicular(bc, cd), isPerpendicular(cd, da)].filter(Boolean).length;
+      const equalSides = Math.abs(lenAB - lenBC) < 0.15 && Math.abs(lenBC - lenCD) < 0.15 && Math.abs(lenCD - lenDA) < 0.15;
+      const equalDiagonals = Math.abs(lenAC - lenBD) < 0.15;
+
+      let category = 'general', name = 'Tứ Giác Thường';
+
+      if (parCount === 2) {
+        if (rightCount >= 2 || (rightCount >= 1 && equalDiagonals)) {
+          if (equalSides) { category = 'square'; name = 'Hình Vuông'; }
+          else { category = 'rectangle'; name = 'Hình Chữ Nhật'; }
+        } else {
+          if (equalSides) { category = 'rhombus'; name = 'Hình Thoi'; }
+          else { category = 'parallelogram'; name = 'Hình Bình Hành'; }
+        }
+      } else if (parCount === 1) {
+        category = 'trapezoid'; name = 'Hình Thang';
+      } else {
+        name = checkConvexity(pts) === 'Lõm' ? 'Tứ Giác Lõm' : 'Tứ Giác Lồi';
+        category = 'convex';
+      }
+
+      return { category, name, parCount, rightCount, lenAB, lenBC, lenCD, lenDA, lenAC, lenBD, convexity: checkConvexity(pts) };
+    }
+
+    function drawRightAngleSymbol(ctx, vertex, v1, v2) {
+      const size = 10;
+      const n1 = { x: v1.x / Math.hypot(v1.x, v1.y), y: v1.y / Math.hypot(v1.x, v1.y) };
+      const n2 = { x: v2.x / Math.hypot(v2.x, v2.y), y: v2.y / Math.hypot(v2.x, v2.y) };
+      const p1 = { x: vertex.x + n1.x * size, y: vertex.y + n1.y * size };
+      const p2 = { x: vertex.x + n1.x * size + n2.x * size, y: vertex.y + n1.y * size + n2.y * size };
+      const p3 = { x: vertex.x + n2.x * size, y: vertex.y + n2.y * size };
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
+      ctx.strokeStyle = getCssVar('--primary') || '#3186ff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawScene() {
+      const box = canvas.parentElement;
+      const w = box.clientWidth || 300, h = box.clientHeight || 350;
+      const dpr = window.devicePixelRatio || 1;
+
+      if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, w, h);
+
+      const cx = w / 2, cy = h / 2;
+
+      if (state.showGrid) {
+        ctx.strokeStyle = getCssVar('--stroke-default') || 'rgba(0,0,0,0.08)';
+        ctx.lineWidth = 1;
+        for (let x = cx % GRID_SCALE; x < w; x += GRID_SCALE) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+        for (let y = cy % GRID_SCALE; y < h; y += GRID_SCALE) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+        ctx.strokeStyle = getCssVar('--outline') || '#727676';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+      }
+
+      const toScreen = (pt) => ({ x: cx + pt.x * GRID_SCALE, y: cy - pt.y * GRID_SCALE });
+      const scrA = toScreen(state.pts.A), scrB = toScreen(state.pts.B), scrC = toScreen(state.pts.C), scrD = toScreen(state.pts.D);
+
+      ctx.beginPath();
+      ctx.moveTo(scrA.x, scrA.y); ctx.lineTo(scrB.x, scrB.y); ctx.lineTo(scrC.x, scrC.y); ctx.lineTo(scrD.x, scrD.y);
+      ctx.closePath();
+      ctx.fillStyle = getCssVar('--accent-container') || 'rgba(49,134,255,0.15)';
+      ctx.fill();
+      ctx.strokeStyle = getCssVar('--primary') || '#3186ff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      if (state.showDiagonals) {
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = getCssVar('--on-surface-variant') || '#777';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(scrA.x, scrA.y); ctx.lineTo(scrC.x, scrC.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(scrB.x, scrB.y); ctx.lineTo(scrD.x, scrD.y); ctx.stroke();
+        ctx.restore();
+      }
+
+      if (state.showAngles) {
+        const checkAndDrawAngle = (v1, vertex, v2, scrVert) => {
+          const vec1 = { x: v1.x - vertex.x, y: v1.y - vertex.y };
+          const vec2 = { x: v2.x - vertex.x, y: v2.y - vertex.y };
+          if (isPerpendicular(vec1, vec2)) {
+            drawRightAngleSymbol(ctx, scrVert, { x: toScreen(v1).x - scrVert.x, y: toScreen(v1).y - scrVert.y }, { x: toScreen(v2).x - scrVert.x, y: toScreen(v2).y - scrVert.y });
+          }
+        };
+        checkAndDrawAngle(state.pts.D, state.pts.A, state.pts.B, scrA);
+        checkAndDrawAngle(state.pts.A, state.pts.B, state.pts.C, scrB);
+        checkAndDrawAngle(state.pts.B, state.pts.C, state.pts.D, scrC);
+        checkAndDrawAngle(state.pts.C, state.pts.D, state.pts.A, scrD);
+      }
+
+      const drawHandle = (scrPt, label) => {
+        ctx.beginPath(); ctx.arc(scrPt.x, scrPt.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = getCssVar('--surface-bright') || '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = getCssVar('--primary') || '#3186ff';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.font = "bold 13px var(--ff-sans, sans-serif)";
+        ctx.fillStyle = getCssVar('--on-surface') || '#000';
+        ctx.fillText(`${label} (${state.pts[label].x.toFixed(1)}, ${state.pts[label].y.toFixed(1)})`, scrPt.x + 10, scrPt.y - 10);
+      };
+
+      drawHandle(scrA, 'A'); drawHandle(scrB, 'B'); drawHandle(scrC, 'C'); drawHandle(scrD, 'D');
+      ctx.restore();
+    }
+
+    function updateUI(res) {
+      shapeBadge.textContent = res.name;
+      valPerimeter.textContent = (res.lenAB + res.lenBC + res.lenCD + res.lenDA).toFixed(2);
+      valArea.textContent = calcArea(state.pts).toFixed(2);
+      valAC.textContent = res.lenAC.toFixed(2);
+      valBD.textContent = res.lenBD.toFixed(2);
+      valParallel.textContent = `${res.parCount} cặp`;
+      valRightAngles.textContent = res.rightCount;
+      valConvexity.textContent = res.name;
+
+      if (document.activeElement !== inputAB) inputAB.value = res.lenAB.toFixed(1);
+      if (document.activeElement !== inputBC) inputBC.value = res.lenBC.toFixed(1);
+      if (document.activeElement !== inputCD) inputCD.value = res.lenCD.toFixed(1);
+      if (document.activeElement !== inputDA) inputDA.value = res.lenDA.toFixed(1);
+
+      updateGraphView(res);
+    }
+
+    function updateGraphView(res) {
+      document.querySelectorAll('.g-node-rect, .g-node-text, .g-edge-line').forEach(el => el.classList.remove('is-active'));
+      document.querySelector('#node-root rect').classList.add('is-active');
+      document.querySelector('#node-root text').classList.add('is-active');
+
+      if (res.parCount === 2) {
+        document.querySelector('#node-prop-par2 rect')?.classList.add('is-active');
+        document.querySelector('#node-prop-par2 text')?.classList.add('is-active');
+        document.querySelector('#edge-par2')?.classList.add('is-active');
+
+        document.querySelector('#node-type-parallelogram rect')?.classList.add('is-active');
+        document.querySelector('#node-type-parallelogram text')?.classList.add('is-active');
+        document.querySelector('#edge-parallelogram')?.classList.add('is-active');
+
+        if (res.category === 'square') {
+          document.querySelector('#node-type-rect rect')?.classList.add('is-active');
+          document.querySelector('#node-type-rect text')?.classList.add('is-active');
+          document.querySelector('#edge-rect')?.classList.add('is-active');
+
+          document.querySelector('#node-type-rhombus rect')?.classList.add('is-active');
+          document.querySelector('#node-type-rhombus text')?.classList.add('is-active');
+          document.querySelector('#edge-rhombus')?.classList.add('is-active');
+
+          document.querySelector('#node-type-square rect')?.classList.add('is-active');
+          document.querySelector('#node-type-square text')?.classList.add('is-active');
+          document.querySelector('#edge-square-from-rect')?.classList.add('is-active');
+          document.querySelector('#edge-square-from-rhombus')?.classList.add('is-active');
+        } else if (res.category === 'rectangle') {
+          document.querySelector('#node-type-rect rect')?.classList.add('is-active');
+          document.querySelector('#node-type-rect text')?.classList.add('is-active');
+          document.querySelector('#edge-rect')?.classList.add('is-active');
+        } else if (res.category === 'rhombus') {
+          document.querySelector('#node-type-rhombus rect')?.classList.add('is-active');
+          document.querySelector('#node-type-rhombus text')?.classList.add('is-active');
+          document.querySelector('#edge-rhombus')?.classList.add('is-active');
+        }
+      } else if (res.parCount === 1) {
+        document.querySelector('#node-prop-par1 rect')?.classList.add('is-active');
+        document.querySelector('#node-prop-par1 text')?.classList.add('is-active');
+        document.querySelector('#edge-par1')?.classList.add('is-active');
+
+        document.querySelector('#node-type-trap rect')?.classList.add('is-active');
+        document.querySelector('#node-type-trap text')?.classList.add('is-active');
+        document.querySelector('#edge-trap')?.classList.add('is-active');
+      } else {
+        document.querySelector('#node-prop-par0 rect')?.classList.add('is-active');
+        document.querySelector('#node-prop-par0 text')?.classList.add('is-active');
+        document.querySelector('#edge-par0')?.classList.add('is-active');
+
+        document.querySelector('#node-type-convex rect')?.classList.add('is-active');
+        document.querySelector('#node-type-convex text')?.classList.add('is-active');
+        document.querySelector('#edge-general')?.classList.add('is-active');
+      }
+    }
+
+    function updateViz() {
+      const res = classifyQuadrilateral(state.pts);
+      drawScene();
+      updateUI(res);
+    }
+
+    function applyEdgeInputs() {
+      const lAB = parseFloat(inputAB.value) || 4;
+      const lDA = parseFloat(inputDA.value) || 4;
+
+      const halfW = lAB / 2;
+      const halfH = lDA / 2;
+      state.pts = {
+        A: { x: -halfW, y: halfH },
+        B: { x: halfW, y: halfH },
+        C: { x: halfW, y: -halfH },
+        D: { x: -halfW, y: -halfH }
+      };
+      updateViz();
+    }
+
+    [inputAB, inputBC, inputCD, inputDA].forEach(inp => {
+      inp.addEventListener('input', applyEdgeInputs);
+    });
+
+    document.querySelectorAll('.g-node-group').forEach(group => {
+      group.addEventListener('click', () => {
+        const action = group.dataset.action;
+        if (action && PRESETS[action]) {
+          state.pts = JSON.parse(JSON.stringify(PRESETS[action]));
+          document.querySelectorAll('.preset-chip').forEach(c => {
+            if (c.dataset.preset === action) c.classList.add('is-active');
+            else c.classList.remove('is-active');
+          });
+          updateViz();
+        }
+      });
+    });
+
+    document.querySelectorAll('.preset-chip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('is-active'));
+        e.target.classList.add('is-active');
+        const presetKey = e.target.dataset.preset;
+        if (PRESETS[presetKey]) {
+          state.pts = JSON.parse(JSON.stringify(PRESETS[presetKey]));
+          updateViz();
+        }
+      });
+    });
+
+    function getGridPosFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const mouseX = clientX - rect.left, mouseY = clientY - rect.top;
+      const w = canvas.parentElement.clientWidth, h = canvas.parentElement.clientHeight;
+      return {
+        x: Math.round(((mouseX - w / 2) / GRID_SCALE) * 2) / 2,
+        y: Math.round(((h / 2 - mouseY) / GRID_SCALE) * 2) / 2
+      };
+    }
+
+    function onPointerDown(e) {
+      const pos = getGridPosFromEvent(e);
+      for (const [key, pt] of Object.entries(state.pts)) {
+        if (Math.hypot(pt.x - pos.x, pt.y - pos.y) < 0.8) {
+          draggedPtKey = key;
+          break;
+        }
+      }
+    }
+
+    function onPointerMove(e) {
+      if (!draggedPtKey) return;
+      e.preventDefault();
+      const pos = getGridPosFromEvent(e);
+      state.pts[draggedPtKey] = { x: Math.max(-6, Math.min(6, pos.x)), y: Math.max(-5, Math.min(5, pos.y)) };
+      updateViz();
+    }
+
+    function onPointerUp() { draggedPtKey = null; }
+
+    canvas.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+    canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+    window.addEventListener('touchmove', onPointerMove, { passive: false });
+    window.addEventListener('touchend', onPointerUp);
+
+    document.getElementById('chkDiagonals').addEventListener('change', (e) => { state.showDiagonals = e.target.checked; updateViz(); });
+    document.getElementById('chkAngles').addEventListener('change', (e) => { state.showAngles = e.target.checked; updateViz(); });
+    document.getElementById('chkGrid').addEventListener('change', (e) => { state.showGrid = e.target.checked; updateViz(); });
+
+    document.querySelectorAll('.panel-tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.panel-tab-btn').forEach(t => t.classList.remove('is-active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('is-active'));
+        e.target.classList.add('is-active');
+        document.getElementById(e.target.dataset.tab).classList.add('is-active');
+      });
+    });
+
+    window.addEventListener('resize', updateViz);
+    updateViz();
+  </script>
+</body>
+</html>
